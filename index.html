@@ -1,192 +1,111 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>EntregaFácil JuáPetro</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EntregaFácil JuáPetro - Chat</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: white;
       margin: 0;
-      padding: 0;
+      font-family: Arial;
+      background: #111;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
     }
     header {
-      background-color: #b30000;
-      padding: 20px;
+      background: red;
+      padding: 15px;
       text-align: center;
       font-size: 24px;
-      font-weight: bold;
     }
-    main {
-      padding: 15px;
-    }
-    .chat-box {
-      background: #1e1e1e;
-      border: 1px solid #333;
-      height: 300px;
-      overflow-y: auto;
+    #chat {
+      flex: 1;
       padding: 10px;
+      overflow-y: auto;
+      background: #222;
+    }
+    .msg {
       margin-bottom: 10px;
-      border-radius: 8px;
-    }
-    .message {
-      margin-bottom: 8px;
+      background: #333;
       padding: 8px;
-      background: #292929;
-      border-radius: 6px;
+      border-radius: 4px;
     }
-    form {
+    footer {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      padding: 10px;
+      background: #111;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: none;
     }
     input {
       flex: 1;
-      padding: 10px;
-      border-radius: 5px;
-      border: none;
     }
     button {
-      padding: 10px 20px;
-      background-color: #e60000;
+      background: red;
       color: white;
-      border: none;
-      border-radius: 5px;
       cursor: pointer;
-    }
-    button:hover {
-      background-color: #ff1a1a;
-    }
-    .hidden {
-      display: none;
     }
   </style>
 </head>
 <body>
-  <header>🛵 EntregaFácil JuáPetro - Chat</header>
+  <header>📦 EntregaFácil JuáPetro - Chat
+  </header>
 
-  <main>
-    <div id="chat-geral" class="chat-box">
-      <!-- Mensagens gerais aparecem aqui -->
-    </div>
+  <div id="chat"></div>
 
-    <form id="form-geral" onsubmit="enviarMensagemGeral(event)">
-      <input id="nome" placeholder="Seu nome (Loja ou Entregador)" required />
-      <input id="mensagem" placeholder="Mensagem no grupo geral" required />
-      <button>Enviar</button>
-    </form>
+  <footer>
+    <input type="text" id="nome" placeholder="Seu nome (Loja ou Entregador)">
+    <input type="text" id="mensagem" placeholder="Mensagem no grupo geral">
+    <button onclick="enviar()">Enviar</button>
+  </footer>
 
-    <section id="chat-privado-section" class="hidden">
-      <h3>💬 Chat Privado com <span id="destino-privado"></span></h3>
-      <div id="chat-privado" class="chat-box"></div>
-
-      <form id="form-privado" onsubmit="enviarMensagemPrivada(event)">
-        <input id="mensagem-privada" placeholder="Mensagem privada (pode enviar link ou localização)" required />
-        <button>Enviar</button>
-      </form>
-    </section>
-  </main>
-
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
-    // 🔐 Coloque aqui suas credenciais do Firebase
     const firebaseConfig = {
-      apiKey: "SUA_API_KEY",
-      authDomain: "SEU_DOMINIO.firebaseapp.com",
-      databaseURL: "https://SEU_DATABASE.firebaseio.com",
-      projectId: "SEU_PROJECT_ID",
-      storageBucket: "SEU_BUCKET.appspot.com",
-      messagingSenderId: "SEU_ID",
-      appId: "SEU_APP_ID"
+      apiKey: "AIzaSyA6bglXoLtD-__wgXryBpytXL2Ps8oS1p4",
+      authDomain: "entregas-jua-petro.firebaseapp.com",
+      projectId: "entregas-jua-petro",
+      storageBucket: "entregas-jua-petro.firebasestorage.app",
+      messagingSenderId: "740486676027",
+      appId: "1:740486676027:web:e51e9b26a5511c49b5a61e",
+      measurementId: "G-PRHRP3VK42"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // ELEMENTOS
-    const chatGeral = document.getElementById("chat-geral");
-    const formGeral = document.getElementById("form-geral");
-    const nomeInput = document.getElementById("nome");
-    const mensagemInput = document.getElementById("mensagem");
-
-    const chatPrivadoSection = document.getElementById("chat-privado-section");
-    const destinoPrivado = document.getElementById("destino-privado");
-    const chatPrivado = document.getElementById("chat-privado");
-    const mensagemPrivadaInput = document.getElementById("mensagem-privada");
-
-    let nomeUsuario = "";
-    let destinoPrivadoAtual = "";
-
-    // 🔄 Mensagens gerais
-    db.ref("chat/geral").on("child_added", (snapshot) => {
-      const msg = snapshot.val();
-      const div = document.createElement("div");
-      div.className = "message";
-      div.innerHTML = `<strong>${msg.nome}:</strong> ${formatarMensagem(msg.texto)}`;
-
-      // Botão de suporte se for loja
-      if (msg.nome.toLowerCase().startsWith("loja")) {
-        const botao = document.createElement("button");
-        botao.textContent = "💬 Falar com a loja";
-        botao.onclick = () => abrirChatPrivado(msg.nome);
-        div.appendChild(botao);
-      }
-
-      chatGeral.appendChild(div);
-      chatGeral.scrollTop = chatGeral.scrollHeight;
-    });
-
-    function enviarMensagemGeral(e) {
-      e.preventDefault();
-      const nome = nomeInput.value.trim();
-      const texto = mensagemInput.value.trim();
+    function enviar() {
+      const nome = document.getElementById('nome').value.trim();
+      const texto = document.getElementById('mensagem').value.trim();
       if (!nome || !texto) return;
 
-      nomeUsuario = nome;
-      db.ref("chat/geral").push({ nome, texto });
-      mensagemInput.value = "";
+      const msg = {
+        nome,
+        texto,
+        timestamp: Date.now()
+      };
+
+      db.ref('mensagens').push(msg);
+      document.getElementById('mensagem').value = "";
     }
 
-    function abrirChatPrivado(destino) {
-      destinoPrivadoAtual = destino;
-      destinoPrivado.textContent = destino;
-      chatPrivadoSection.classList.remove("hidden");
-      chatPrivado.innerHTML = "";
-
-      const chatID = gerarIDPrivado(nomeUsuario, destino);
-
-      db.ref("chat/privado/" + chatID).off();
-      db.ref("chat/privado/" + chatID).on("child_added", (snap) => {
-        const msg = snap.val();
-        const div = document.createElement("div");
-        div.className = "message";
-        div.innerHTML = `<strong>${msg.nome}:</strong> ${formatarMensagem(msg.texto)}`;
-        chatPrivado.appendChild(div);
-        chatPrivado.scrollTop = chatPrivado.scrollHeight;
-      });
-    }
-
-    function enviarMensagemPrivada(e) {
-      e.preventDefault();
-      const texto = mensagemPrivadaInput.value.trim();
-      if (!texto || !destinoPrivadoAtual) return;
-
-      const chatID = gerarIDPrivado(nomeUsuario, destinoPrivadoAtual);
-      db.ref("chat/privado/" + chatID).push({ nome: nomeUsuario, texto });
-      mensagemPrivadaInput.value = "";
-    }
-
-    function gerarIDPrivado(a, b) {
-      return [a, b].sort().join("_");
-    }
-
-    function formatarMensagem(msg) {
-      const regexURL = /(https?:\/\/[^\s]+)/g;
-      return msg.replace(regexURL, (url) => `<a href="${url}" target="_blank" style="color:#ff5555">${url}</a>`);
-    }
+    const chat = document.getElementById('chat');
+    db.ref('mensagens').on('child_added', snapshot => {
+      const msg = snapshot.val();
+      const div = document.createElement('div');
+      div.className = 'msg';
+      div.innerHTML = `<strong>${msg.nome}</strong>: ${msg.texto}`;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    });
   </script>
 </body>
 </html>
