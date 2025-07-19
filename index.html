@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Entregas JuáPetro</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background-color: #f2f2f2;
+    }
+
+    header {
+      background: #b30000;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+      font-size: 20px;
+    }
+
+    #login {
+      padding: 15px;
+      text-align: center;
+      background: #fff;
+    }
+
+    #chat-box {
+      flex: 1;
+      padding: 15px;
+      overflow-y: auto;
+      background-color: #fff;
+      border-top: 1px solid #ccc;
+      display: none;
+    }
+
+    .msg {
+      margin-bottom: 10px;
+      padding: 10px;
+      background-color: #eee;
+      border-radius: 5px;
+    }
+
+    .highlight {
+      background-color: #d1ffd6;
+    }
+
+    #chat-input {
+      display: none;
+      padding: 10px;
+      background: #fff;
+      display: flex;
+    }
+
+    #chat-input input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    #chat-input button {
+      margin-left: 10px;
+      padding: 10px 20px;
+      background-color: #b30000;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #chat-input button:hover {
+      background: #990000;
+    }
+  </style>
+</head>
+<body>
+  <header>📦 Entregas JuáPetro</header>
+
+  <div id="login">
+    <label>Seu nome:</label>
+    <input type="text" id="username" placeholder="Ex: João" />
+    <label>Você é:</label>
+    <select id="role">
+      <option value="Lojista">Lojista</option>
+      <option value="Entregador">Entregador</option>
+    </select>
+    <button onclick="startChat()">Entrar</button>
+  </div>
+
+  <div id="chat-box"></div>
+
+  <div id="chat-input">
+    <input type="text" id="message" placeholder="Digite sua mensagem..." />
+    <button onclick="sendMessage()">Enviar</button>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById("chat-box");
+    let username = "";
+    let role = "";
+    let entregaAtiva = false;
+    let entregaAceita = false;
+    let entregadorVencedor = "";
+    let lojistaAtual = "";
+
+    function startChat() {
+      username = document.getElementById("username").value.trim();
+      role = document.getElementById("role").value;
+      if (!username) {
+        alert("Digite seu nome!");
+        return;
+      }
+
+      document.getElementById("login").style.display = "none";
+      chatBox.style.display = "block";
+      document.getElementById("chat-input").style.display = "flex";
+
+      const msg = document.createElement("div");
+      msg.className = "msg";
+      msg.innerHTML = `<strong>Sistema:</strong> ${username} entrou como ${role}`;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("message");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const msg = document.createElement("div");
+      msg.className = "msg";
+
+      if (role === "Lojista" && text.toLowerCase().includes("entrega")) {
+        if (entregaAtiva) {
+          alert("Já existe uma entrega ativa!");
+          return;
+        }
+
+        entregaAtiva = true;
+        lojistaAtual = username;
+        msg.innerHTML = `<strong>${username} (Lojista):</strong> ${text} <br><em>🚨 Entregadores: digitem "eu" para aceitar!</em>`;
+      } else if (role === "Entregador" && text.toLowerCase() === "eu") {
+        if (!entregaAtiva) {
+          msg.innerHTML = `<strong>${username}:</strong> Ainda não há entrega ativa. Aguarde.`;
+        } else if (entregaAceita) {
+          msg.innerHTML = `<strong>${username}:</strong> Entrega já foi aceita por outro entregador.`;
+        } else {
+          entregaAceita = true;
+          entregadorVencedor = username;
+          msg.classList.add("highlight");
+          msg.innerHTML = `<strong>${username} (Entregador):</strong> EU! ✅ <br><em>Entrega atribuída a ${username}. Agora você pode conversar com ${lojistaAtual}</em>`;
+        }
+      } else if (entregaAceita && ((username === lojistaAtual) || (username === entregadorVencedor))) {
+        msg.innerHTML = `<strong>${username}:</strong> ${text}`;
+      } else if (entregaAceita && username !== lojistaAtual && username !== entregadorVencedor) {
+        msg.innerHTML = `<strong>${username}:</strong> 🚫 Essa entrega já foi aceita. Aguarde outra.`;
+      } else {
+        msg.innerHTML = `<strong>${username}:</strong> ${text}`;
+      }
+
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      input.value = "";
+    }
+  </script>
+</body>
+</html>
